@@ -1,24 +1,134 @@
+
 # Simple Chatroom (Go + RPC)
 
-This project implements a simple chatroom using Go and the net/rpc package. See PLAN.md for details.
+![go](https://img.shields.io/badge/go-1.20-blue) ![status](https://img.shields.io/badge/status-development-yellow)
 
-## Quick Start
+A simple chatroom written in Go using the native `net/rpc` package for efficient client-server communication. The implementation keeps the latest 1000 messages in memory and enforces per-client history access (clients can only request their own messages).
 
-1. Build the server:
-   ```powershell
-   go build ./cmd/server
-   ```
-2. Run the server:
-   ```powershell
-   .\server.exe
-   ```
-3. Build the client:
-   ```powershell
-   go build ./cmd/client
-   ```
-4. Run the client:
-   ```powershell
-   .\client.exe
-   ```
+## Why net/rpc?
 
-See PLAN.md for full requirements, design, and usage.
+Go's native RPC package provides type-safe, efficient communication between Go programs. It offers excellent performance, built-in concurrent handling of connections, and seamless integration with Go's type system.
+
+## Key Components
+
+- 📦 `pkg/chat` — core types and the `ChatService` implementation (`pkg/chat/api.go`). Thread-safe in-memory storage with automatic cleanup (keeps last 1000 messages).
+- 🖥️ `cmd/server` — RPC server implementation using Go's net/rpc package for efficient communication (`cmd/server/main.go`).
+- 🧑‍💻 `cmd/client` — interactive terminal client that connects via RPC and supports simple commands (`cmd/client/main.go`).
+
+## Quick Start (PowerShell)
+
+### Server
+
+1. Build the server
+
+    ```powershell
+    go build ./cmd/server
+    ```
+
+2. Run the server (default port 8080)
+
+    ```powershell
+    .\server.exe -port 8080
+    ```
+
+The server supports graceful shutdown via Ctrl+C.
+
+Server flags:
+
+- `-port <n>` — port to listen on (default 8080)
+- `-logfile <path>` — write logs to file instead of stdout
+
+### Client
+
+1. Build the client
+
+    ```powershell
+    go build ./cmd/client
+    ```
+
+2. Run the client and follow the prompt
+
+    ```powershell
+    .\client.exe -server localhost:8080
+    ```
+
+## Usage
+
+### Client Commands
+
+- `/help` — show help and available commands
+- `/history [sinceID]` — fetch your own messages. If `sinceID` omitted or 0, returns all messages for your user.
+- `/whoami` — print current username
+- `/exit` — quit the client
+- Any other text — sent as a message from your username
+
+### Server RPC Interface
+
+The server exposes two RPC methods:
+
+#### ChatService.SendMessage
+
+- Args: `SendMessageArgs{ Author string, Text string }`
+- Reply: `SendMessageReply{ OK bool, Error string }`
+
+#### ChatService.GetHistory
+
+- Args: `GetHistoryArgs{ Author string, SinceID int64 }`
+- Reply: `GetHistoryReply{ Messages []Message }`
+
+where `Message` is:
+
+```go
+type Message struct {
+    ID        int64     // unique message id
+    Author    string    // username
+    Text      string    // message body
+    Timestamp time.Time // server timestamp
+}
+```
+
+## Notes & Limitations
+
+- Storage is in-memory only. Restarting the server clears the history.
+- There is no authentication: the server trusts the `Author` value provided by clients. For real deployments add authentication and server-side identity verification.
+- The CLI enforces an 8KB input cap per message; the server itself does not limit message size today.
+
+## Project Files
+
+- `pkg/chat/api.go` — core types and `ChatService`
+- `cmd/server/main.go` — RPC server implementation
+- `cmd/client/main.go` — interactive client
+
+## Future Improvements
+
+- ✅ Add unit tests for `pkg/chat` (recommended)
+- 🔐 Add authentication so clients can't impersonate each other
+- 💾 Add persistence so history survives restarts
+
+## License
+
+This project is licensed under the MIT License.
+
+```
+MIT License
+
+Copyright (c) 2025
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
