@@ -1,0 +1,48 @@
+version: '3.8'
+
+networks:
+  app_net:
+    driver: bridge
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: cmd/server/Dockerfile
+    image: moazloaie/simple_chatroom:server
+    container_name: simple_chatroom-server
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - app_net
+
+  client:
+    build:
+      context: .
+      dockerfile: cmd/client/Dockerfile
+    image: moazloaie/simple_chatroom:client
+    container_name: simple_chatroom-client
+    stdin_open: true
+    tty: true
+    # client runs only when explicitly requested (interactive).
+    profiles:
+      - client
+    depends_on:
+      - server
+    networks:
+      - app_net
+    # By default the client will connect to the server service name inside the compose network.
+    command: ["-server","server:8080"]
+
+# Notes:
+# - Start only server: `docker compose up -d server`
+# - Run client interactively: `docker compose run --rm client -server server:8080`
+# - To persist server logs, mount a host directory as a volume in the `server` service.
