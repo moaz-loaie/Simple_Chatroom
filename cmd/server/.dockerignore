@@ -1,0 +1,14 @@
+# Ignored by Docker build context for server
+**/bin
+**/dist
+**/*.exe
+*.log
+*.tmp
+.git
+.gitignore
+.DS_Store
+node_modules
+vendor
+cmd/client
+README.md
+*.swp
